@@ -1,0 +1,8 @@
+<Solution>
+  <Project Path="TranslationService.Api/TranslationService.Api.csproj" />
+  <Project Path="TranslationService.Application/TranslationService.Application.csproj" />
+  <Project Path="TranslationService.Client/TranslationService.Client.csproj" />
+  <Project Path="TranslationService.Domain/TranslationService.Domain.csproj" />
+  <Project Path="TranslationService.Infrastructure/TranslationService.Infrastructure.csproj" />
+  <Project Path="TranslationService.Tests/TranslationService.Tests.csproj" />
+</Solution>
