@@ -21,7 +21,9 @@ GITHUB_USER_LC="$(printf '%s' "${GITHUB_USER}" | tr '[:upper:]' '[:lower:]')"
 IMAGE="ghcr.io/${GITHUB_USER_LC}/translation-api:${IMAGE_TAG}"
 
 RESOURCE_GROUP="${RESOURCE_GROUP:-rg-translation-service}"
-LOCATION="${LOCATION:-westeurope}"
+# westeurope no admite clientes nuevos en esta suscripción ("locationineligible").
+# germanywestcentral coincide además con la región del recurso de Azure Translator.
+LOCATION="${LOCATION:-germanywestcentral}"
 
 AZURE_TRANSLATOR_API_KEY="${AZURE_TRANSLATOR_API_KEY:?Define AZURE_TRANSLATOR_API_KEY}"
 AZURE_TRANSLATOR_REGION="${AZURE_TRANSLATOR_REGION:?Define AZURE_TRANSLATOR_REGION}"
@@ -58,6 +60,7 @@ DEPLOYMENT_OUTPUT=$(az deployment group create \
       containerImage="${IMAGE}" \
       azureTranslatorApiKey="${AZURE_TRANSLATOR_API_KEY}" \
       azureTranslatorRegion="${AZURE_TRANSLATOR_REGION}" \
+      location="${LOCATION}" \
   --query properties.outputs \
   --output json)
 
