@@ -11,15 +11,17 @@
   --color-border-subtle: oklch(0.922 0.006 250);
 
   --color-content: oklch(0.21 0.02 265);
-  --color-content-muted: oklch(0.554 0.02 265);
+  /* 0.554 daba 4.35:1 sobre --color-surface-muted; por debajo del 4.5 de WCAG AA. */
+  --color-content-muted: oklch(0.492 0.021 265);
 
   --color-brand: oklch(0.55 0.21 265);
   --color-brand-strong: oklch(0.48 0.22 265);
   --color-brand-contrast: oklch(0.985 0 0);
 
-  --color-success: oklch(0.62 0.16 150);
-  --color-warning: oklch(0.72 0.16 75);
-  --color-danger: oklch(0.58 0.22 25);
+  /* 0.62 daba 2.97:1 sobre el tinte success/12 de los badges. */
+  --color-success: oklch(0.46 0.13 150);
+  --color-warning: oklch(0.52 0.13 75);
+  --color-danger: oklch(0.52 0.2 25);
 
   --radius-card: 0.875rem;
   --radius-bubble: 1.125rem;
@@ -80,5 +82,20 @@
 
   @media (prefers-reduced-motion: reduce) {
     .animate-bubble-in { animation: none; }
+  }
+}
+
+@layer utilities {
+  /* Contenido disponible para lectores de pantalla pero fuera del flujo visual. */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+    border-width: 0;
   }
 }

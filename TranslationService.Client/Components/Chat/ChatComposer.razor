@@ -1,38 +1,91 @@
-<div class="border-t border-border-subtle bg-surface/80 p-4 backdrop-blur">
-    <div class="mx-auto flex w-full max-w-3xl items-end gap-3">
-        <textarea @ref="_textArea"
-                  value="@Value"
-                  @oninput="OnInput"
-                  @onkeydown="OnKeyDownAsync"
-                  rows="1"
-                  maxlength="5000"
-                  placeholder="@Placeholder"
-                  aria-label="Texto a traducir"
-                  class="max-h-40 min-h-[2.75rem] flex-1 resize-none rounded-xl border border-border-subtle bg-canvas px-4 py-3
-                         text-sm leading-relaxed text-content placeholder:text-content-muted
-                         focus:border-brand focus:outline-none"></textarea>
+@* La caja crece con el contenido usando la técnica del "duplicado invisible" sobre CSS Grid:
+   un div oculto con el mismo texto y la misma tipografía ocupa la celda, y el textarea se
+   estira para llenarla. Es CSS puro —sin interop de JS ni medir scrollHeight en cada
+   pulsación— y funciona en todos los navegadores. *@
 
-        <Button OnClick="SubmitAsync" Disabled="@(!CanSubmit)" Class="h-[2.75rem] shrink-0">
-            Traducir
-        </Button>
-    </div>
+@* pb con env(safe-area-inset-bottom): en iPhone el indicador de inicio se superpone al
+   borde inferior de la ventana y taparía la última línea del composer. *@
+<div class="border-t border-border-subtle bg-surface/80 pb-[env(safe-area-inset-bottom)] backdrop-blur">
+    @* aria-label convierte el form en un landmark con nombre: sin él, el campo y las
+       pistas quedan fuera de toda región y un lector de pantalla no puede saltar aquí. *@
+    <form class="mx-auto w-full max-w-3xl px-4 pb-3 pt-4"
+          aria-label="Redactar traducción"
+          @onsubmit="SubmitAsync" @onsubmit:preventDefault>
+        <div class="flex items-end gap-2 sm:gap-3">
 
-    <p class="mx-auto mt-2 w-full max-w-3xl text-xs text-content-muted">
-        Pulsa <kbd class="rounded border border-border-subtle bg-surface-muted px-1 py-0.5 font-sans">Enter</kbd> para enviar,
-        <kbd class="rounded border border-border-subtle bg-surface-muted px-1 py-0.5 font-sans">Shift + Enter</kbd> para salto de línea.
-        El idioma de origen se detecta automáticamente.
-    </p>
+            <div class="relative grid flex-1 rounded-xl border border-border-subtle bg-canvas
+                        focus-within:border-brand focus-within:ring-2 focus-within:ring-brand/25">
+
+                @* Réplica invisible: define el alto. El espacio final evita que la caja
+                   encoja de golpe mientras se escribe la última línea. *@
+                <div aria-hidden="true"
+                     class="pointer-events-none invisible col-start-1 row-start-1 max-h-52 overflow-hidden
+                            whitespace-pre-wrap break-words px-4 py-3 text-base leading-relaxed sm:text-sm">@(Value + " ")</div>
+
+                <textarea @ref="_textArea"
+                          id="translation-input"
+                          value="@Value"
+                          @oninput="OnInput"
+                          @onkeydown="OnKeyDownAsync"
+                          rows="1"
+                          maxlength="@MaxLength"
+                          placeholder="@Placeholder"
+                          aria-label="Texto a traducir"
+                          aria-describedby="composer-hint composer-count"
+                          class="col-start-1 row-start-1 max-h-52 w-full resize-none overflow-y-auto rounded-xl
+                                 bg-transparent px-4 py-3 leading-relaxed text-content
+                                 placeholder:text-content-muted focus:outline-none
+                                 text-base sm:text-sm"></textarea>
+            </div>
+
+            @* En móvil el botón es sólo icono: devuelve al campo de texto el ancho que la
+               etiqueta le robaba. El nombre accesible se conserva en aria-label. *@
+            <button type="submit"
+                    disabled="@(!CanSubmit)"
+                    aria-label="Traducir"
+                    class="inline-flex h-11 shrink-0 items-center justify-center gap-2 rounded-xl bg-brand px-3
+                           text-sm font-medium text-brand-contrast transition-colors
+                           hover:bg-brand-strong disabled:cursor-not-allowed disabled:opacity-50 sm:px-4">
+                <svg class="size-5 sm:hidden" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="m22 2-7 20-4-9-9-4Z" /><path d="M22 2 11 13" />
+                </svg>
+                <span class="hidden sm:inline">Traducir</span>
+            </button>
+        </div>
+
+        <div class="mt-2 flex items-start justify-between gap-3 text-xs text-content-muted">
+            @* La pista de teclado no aplica en pantallas táctiles: se oculta por debajo de sm. *@
+            <p id="composer-hint" class="hidden sm:block">
+                <kbd class="rounded border border-border-subtle bg-surface-muted px-1 py-0.5 font-sans">Enter</kbd> para enviar ·
+                <kbd class="rounded border border-border-subtle bg-surface-muted px-1 py-0.5 font-sans">Shift + Enter</kbd> para salto de línea
+            </p>
+            <p class="sm:hidden">Se detecta el idioma automáticamente</p>
+
+            @* El contador sólo aparece cerca del límite: ruido visual únicamente cuando importa. *@
+            <p id="composer-count"
+               class="@($"shrink-0 tabular-nums {(IsNearLimit ? "text-warning" : "sr-only")}")"
+               aria-live="polite">
+                @Value.Length de @MaxLength caracteres
+            </p>
+        </div>
+    </form>
 </div>
 
 @code {
+    private const int MaxLength = 5000;
+    private const int WarnThreshold = 4_500;
+
     private ElementReference _textArea;
 
     [Parameter] public string Value { get; set; } = string.Empty;
     [Parameter] public EventCallback<string> ValueChanged { get; set; }
     [Parameter] public EventCallback OnSubmit { get; set; }
-    [Parameter] public string Placeholder { get; set; } = "Escribe el texto que quieres traducir...";
+    [Parameter] public string Placeholder { get; set; } = "Escribe o pega un texto...";
 
     private bool CanSubmit => !string.IsNullOrWhiteSpace(Value);
+
+    private bool IsNearLimit => Value.Length >= WarnThreshold;
 
     private Task OnInput(ChangeEventArgs args) => ValueChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty);
 
@@ -54,6 +107,7 @@
         }
 
         await OnSubmit.InvokeAsync();
+        // Devolver el foco al campo permite encadenar mensajes sin tocar el ratón.
         await _textArea.FocusAsync();
     }
 }

@@ -35,6 +35,19 @@
         </span>
     </div>
 
+    <script>
+        // Enter envía el mensaje, pero el navegador insertaría igualmente el salto de línea
+        // DESPUÉS de que Blazor vacíe el campo: la caja quedaba hinchada con una línea en
+        // blanco invisible que además viajaba en el siguiente mensaje.
+        // Va en línea y no como módulo: los módulos bajo wwwroot se sirven con huella
+        // digital y el import falla al publicar desde la Api.
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Enter' && !e.shiftKey && e.target.id === 'translation-input') {
+                e.preventDefault();
+            }
+        }, true);
+    </script>
+
     <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
 </body>
 

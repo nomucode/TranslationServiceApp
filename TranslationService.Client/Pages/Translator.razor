@@ -20,7 +20,10 @@
                 </div>
                 <div>
                     <h1 class="text-sm font-semibold leading-tight">Servicio de Traducción</h1>
-                    <p class="text-xs text-content-muted">Detección automática · Traduce al español</p>
+                    @* Se oculta bajo sm: junto al botón "Limpiar" no cabe en 375px y
+                       envolvía a dos líneas. La misma información está en el estado vacío
+                       y en la pista del composer. *@
+                    <p class="hidden text-xs text-content-muted sm:block">Detección automática · Traduce al español</p>
                 </div>
             </div>
 
@@ -31,8 +34,8 @@
         </div>
     </header>
 
-    <main class="flex-1 overflow-y-auto" aria-live="polite">
-        <div class="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-6">
+    <main class="flex flex-1 flex-col-reverse overflow-y-auto" aria-label="Conversación">
+        <div class="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-6 px-4 py-6">
             @if (_entries.Count == 0)
             {
                 <div class="flex flex-col items-center gap-3 pt-16 text-center">
@@ -57,6 +60,10 @@
         </div>
     </main>
 
+    @* Región live acotada: anuncia SÓLO el último cambio de estado, en vez de releer
+       la conversación entera cada vez que el sondeo actualiza un mensaje. *@
+    <p role="status" aria-live="polite" class="sr-only">@_announcement</p>
+
     <ChatComposer @bind-Value="_draft" OnSubmit="SendAsync" />
 </div>
 
@@ -64,6 +71,7 @@
     private readonly List<ChatEntry> _entries = [];
     private readonly CancellationTokenSource _cts = new();
     private string _draft = string.Empty;
+    private string _announcement = string.Empty;
 
     private async Task SendAsync()
     {
@@ -78,6 +86,7 @@
         var entry = new ChatEntry(text);
         _entries.Add(entry);
         _draft = string.Empty;
+        Announce("Enviado. Traduciendo...");
 
         var accepted = await Api.CreateAsync(text, _cts.Token);
         if (accepted.IsFailure)
@@ -111,11 +120,17 @@
                 var job = await Api.GetAsync(entry.StatusUrl, _cts.Token);
                 if (job.IsSuccess)
                 {
+                    var wasSettled = entry.IsSettled;
                     entry.Apply(job.Value);
                     await InvokeAsync(StateHasChanged);
 
                     if (job.Value.IsTerminal)
                     {
+                        if (!wasSettled)
+                        {
+                            Announce(DescribeOutcome(entry));
+                        }
+
                         return;
                     }
                 }
@@ -132,7 +147,25 @@
         }
     }
 
-    private void Clear() => _entries.Clear();
+    private void Clear()
+    {
+        _entries.Clear();
+        Announce("Conversación borrada.");
+    }
+
+    /// El texto se reasigna siempre —aunque sea idéntico— para que la región live vuelva a
+    /// dispararse cuando dos traducciones seguidas producen el mismo anuncio.
+    private void Announce(string message) => _announcement = message;
+
+    private static string DescribeOutcome(ChatEntry entry) => entry.State switch
+    {
+        ChatEntryState.Completed when entry.WasTranslated =>
+            $"Traducido del {entry.DetectedLanguage} al español: {entry.TranslatedText}",
+        ChatEntryState.Completed => "El texto ya estaba en español; se devuelve sin traducir.",
+        ChatEntryState.TimedOut => "El servidor tarda más de lo esperado.",
+        _ => $"No se pudo traducir. {entry.ErrorMessage}"
+    };
+
 
     /// Cancelar aquí es lo que impide que los bucles de sondeo sigan vivos —y llamando a
     /// StateHasChanged sobre un componente ya destruido— si el usuario navega fuera.
