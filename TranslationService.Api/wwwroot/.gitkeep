@@ -1,0 +1,6 @@
+Carpeta intencionadamente vacía.
+
+En desarrollo, los artefactos del cliente Blazor WebAssembly se sirven a través del
+manifiesto de static web assets, no desde aquí. En `dotnet publish` es donde se copian
+físicamente a esta ruta. Sin la carpeta, StaticFileMiddleware avisa en cada arranque de
+que WebRootPath no existe.
