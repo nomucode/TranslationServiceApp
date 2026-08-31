@@ -1,0 +1,23 @@
+## .NET
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+*.user
+*.suo
+.vs/
+.idea/
+artifacts/
+
+## Node / Tailwind
+node_modules/
+# Artefacto generado por el CLI de Tailwind a partir de Styles/app.tailwind.css
+TranslationService.Client/wwwroot/css/app.css
+
+## Secretos: la key de Azure vive en user-secrets, jamás en el repositorio
+appsettings.*.local.json
+*.local.json
+secrets.json
+
+## macOS
+.DS_Store

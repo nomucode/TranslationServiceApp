@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Proyecto deliberadamente sin dependencias: es el contrato compartido entre la Api y el
+       cliente WASM. Si algún día necesitara referenciar Domain o Application, sería la señal
+       de que se han filtrado tipos de dominio hacia el navegador. -->
+
+</Project>
