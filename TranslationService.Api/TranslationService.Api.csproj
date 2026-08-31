@@ -20,4 +20,44 @@
     <ProjectReference Include="..\TranslationService.Client\TranslationService.Client.csproj" />
   </ItemGroup>
 
+  <!--
+    Hospedar un Blazor WASM desde un proyecto de API deja un hueco en el SDK: el index.html
+    llega como static web asset de un proyecto referenciado, y la generación del import map
+    y la sustitución del marcador #[.{fingerprint}] sólo ocurren durante el publish del
+    propio proyecto Blazor. El index.html que publicaba la Api conservaba el marcador y un
+    import map vacío, así que el navegador pedía /_framework/dotnet.js —que no existe,
+    porque todo va huellado— y el SPA no arrancaba.
+
+    Sólo se manifiesta en `dotnet publish`: con `dotnet run` el fichero se sirve desde el
+    disco del proyecto Client. Se detectó ejecutando la imagen del contenedor.
+
+    Solución: publicar el Client y quedarse con SU index.html. Es seguro porque las huellas
+    son hashes del contenido, de modo que ambos publishes producen exactamente los mismos
+    nombres de fichero (verificado). Las comprobaciones de abajo convierten cualquier
+    regresión futura en un fallo de compilación, no en una página en blanco en producción.
+  -->
+  <Target Name="UseBlazorClientPublishedHtml" AfterTargets="Publish">
+    <PropertyGroup>
+      <_ClientPublishDir>$([System.IO.Path]::GetFullPath('$(MSBuildProjectDirectory)/$(IntermediateOutputPath)blazorclient/'))</_ClientPublishDir>
+    </PropertyGroup>
+
+    <MSBuild Projects="../TranslationService.Client/TranslationService.Client.csproj"
+             Targets="Publish"
+             Properties="Configuration=$(Configuration);PublishDir=$(_ClientPublishDir);SkipTailwindBuild=$(SkipTailwindBuild)" />
+
+    <Copy SourceFiles="$(_ClientPublishDir)wwwroot/index.html"
+          DestinationFiles="$(PublishDir)wwwroot/index.html" />
+
+    <PropertyGroup>
+      <_FinalIndexHtml>$([System.IO.File]::ReadAllText('$(PublishDir)wwwroot/index.html'))</_FinalIndexHtml>
+    </PropertyGroup>
+
+    <Error Condition="$(_FinalIndexHtml.Contains('#[.{fingerprint}]'))"
+           Text="El index.html publicado conserva el marcador de huella digital: el SPA no arrancaría." />
+    <Error Condition="!$(_FinalIndexHtml.Contains('&quot;imports&quot;'))"
+           Text="El index.html publicado tiene el import map vacío: el navegador no podría resolver dotnet.js." />
+
+    <Message Importance="high" Text="index.html tomado del publish del Client (script de arranque e import map resueltos)." />
+  </Target>
+
 </Project>

@@ -1,0 +1,43 @@
+# Artefactos de compilación
+**/bin/
+**/obj/
+**/out/
+artifacts/
+
+# Dependencias de Node: la etapa `css` las instala con `npm ci` dentro de la imagen.
+**/node_modules/
+
+# Control de versiones y CI
+.git/
+.gitignore
+.gitattributes
+.github/
+
+# IDE
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.swp
+
+# Configuración local y secretos: jamás deben acabar dentro de la imagen.
+**/appsettings.Development.json
+**/appsettings.*.local.json
+**/secrets.json
+**/.usersecrets
+**/*.pfx
+.env
+.env.*
+
+# Infraestructura y documentación: irrelevantes para el contenido de la imagen y
+# excluirlos evita invalidar la caché de capas al editarlos.
+infra/
+deploy.sh
+**/*.md
+Dockerfile
+.dockerignore
+
+# Sistema operativo
+.DS_Store
+Thumbs.db

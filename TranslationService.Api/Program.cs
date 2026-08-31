@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.HttpOverrides;
 using Scalar.AspNetCore;
 using TranslationService.Api.Endpoints;
 using TranslationService.Api.Infrastructure;
@@ -21,8 +22,25 @@ builder.Services.AddProblemDetails(options =>
 
 builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
 builder.Services.AddOpenApi();
+builder.Services.AddHealthChecks();
+
+// Detrás del ingress de Azure Container Apps la terminación TLS ocurre en el borde y al
+// contenedor le llega HTTP plano. Sin honrar X-Forwarded-Proto, UseHttpsRedirection vería
+// una petición insegura y respondería con un 307 a https... que volvería a llegar como
+// HTTP: un bucle de redirección infinito. También restaura la IP real del cliente en los logs.
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    // La IP del proxy de Container Apps no se conoce de antemano y cambia entre revisiones.
+    // Es seguro porque el contenedor sólo es alcanzable a través de ese ingress.
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+});
 
 var app = builder.Build();
+
+// Debe ir antes que cualquier middleware que consulte el esquema o la IP de origen.
+app.UseForwardedHeaders();
 
 app.UseExceptionHandler();
 // Convierte también las respuestas de error sin cuerpo (404 de ruta, 405...) en ProblemDetails.
@@ -42,6 +60,10 @@ else
 // Hosting del SPA: estos tres deben ir en este orden y después del pipeline de errores.
 app.UseBlazorFrameworkFiles();
 app.UseStaticFiles();
+
+// Sonda de disponibilidad para el orquestador. Excluida de OpenAPI: es infraestructura,
+// no parte del contrato público de la API.
+app.MapHealthChecks("/health").ExcludeFromDescription();
 
 app.MapTranslationEndpoints();
 

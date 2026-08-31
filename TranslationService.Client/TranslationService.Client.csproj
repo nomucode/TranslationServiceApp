@@ -2,6 +2,9 @@
 
   <PropertyGroup>
     <OverrideHtmlAssetPlaceholders>true</OverrideHtmlAssetPlaceholders>
+    <!-- El Dockerfile genera el CSS en una etapa Node separada y lo copia ya construido,
+         de modo que la imagen del SDK de .NET no necesita tener npm instalado. -->
+    <SkipTailwindBuild Condition="'$(SkipTailwindBuild)' == ''">false</SkipTailwindBuild>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,11 +16,11 @@
     <ProjectReference Include="..\TranslationService.Contracts\TranslationService.Contracts.csproj" />
   </ItemGroup>
 
-  <!-- wwwroot/css/app.css es un artefacto generado por Tailwind, no fuente: se excluye del
-       proyecto para que no se versione ni se duplique como static web asset. -->
+  <!-- wwwroot/css/app.css lo genera Tailwind y NO se versiona (está en .gitignore), pero
+       debe seguir siendo un static web asset normal: excluirlo del proyecto hacía que
+       `dotnet publish` no lo copiara y la aplicación se desplegara sin hoja de estilos.
+       Sólo se veía en el contenedor, porque `dotnet run` sirve el fichero desde el disco. -->
   <ItemGroup>
-    <Content Remove="wwwroot/css/app.css" />
-    <None Include="wwwroot/css/app.css" CopyToOutputDirectory="Never" />
     <TailwindInput Include="Styles/app.tailwind.css" />
     <TailwindSource Include="**/*.razor;**/*.html" Exclude="bin/**;obj/**;node_modules/**" />
   </ItemGroup>
@@ -26,6 +29,7 @@
        package.json evita reinstalar en cada compilación. -->
   <Target Name="RestoreNpmPackages"
           BeforeTargets="BuildTailwindCss"
+          Condition="'$(SkipTailwindBuild)' != 'true'"
           Inputs="package.json"
           Outputs="node_modules/.package-lock.json">
     <Message Importance="high" Text="Instalando dependencias npm del cliente..." />
@@ -36,6 +40,7 @@
        alguna clase en un .razor, no en cada compilación. -->
   <Target Name="BuildTailwindCss"
           BeforeTargets="BeforeBuild"
+          Condition="'$(SkipTailwindBuild)' != 'true'"
           Inputs="@(TailwindInput);@(TailwindSource);package.json"
           Outputs="wwwroot/css/app.css">
     <Message Importance="high" Text="Generando CSS con Tailwind..." />
