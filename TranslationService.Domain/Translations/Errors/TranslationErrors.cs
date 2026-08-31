@@ -27,6 +27,9 @@ public static class TranslationErrors
     public static readonly Error JobNotFound =
         Error.NotFound("TranslationJob.NotFound", "No existe ningún trabajo de traducción con ese identificador.");
 
+    public static readonly Error DuplicateJob =
+        Error.Conflict("TranslationJob.Duplicate", "Ya existe un trabajo de traducción con ese identificador.");
+
     public static readonly Error NoOutcomeYet =
         Error.Conflict("TranslationJob.NoOutcome", "El trabajo de traducción todavía no ha producido un resultado.");
 
