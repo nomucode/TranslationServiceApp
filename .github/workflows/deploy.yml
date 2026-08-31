@@ -23,9 +23,54 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  test:
+    name: Run tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.x'
+
+      - name: Cache NuGet packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.nuget/packages
+          # Las versiones están centralizadas, así que basta con vigilar ese fichero.
+          key: nuget-${{ runner.os }}-${{ hashFiles('Directory.Packages.props') }}
+          restore-keys: nuget-${{ runner.os }}-
+
+      - name: Restore
+        run: dotnet restore TranslationService.slnx
+
+      - name: Test
+        # SkipTailwindBuild: los tests no necesitan CSS, así que el job no depende de npm.
+        # Se excluyen los de humo, que llaman a Azure Translator real y necesitan credenciales.
+        run: >
+          dotnet test TranslationService.slnx
+          --no-restore
+          --filter "FullyQualifiedName!~Smoke"
+          --logger "trx;LogFileName=test-results.trx"
+          -p:SkipTailwindBuild=true
+
+      - name: Upload test results
+        # También cuando fallan: es justo entonces cuando hacen falta.
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: '**/TestResults/*.trx'
+          if-no-files-found: warn
+
   build:
     name: Build and push image
     runs-on: ubuntu-latest
+    # Puerta de calidad: sin tests en verde no se construye la imagen ni se despliega.
+    needs: test
     outputs:
       image: ${{ steps.meta.outputs.image }}
 
