@@ -13,4 +13,14 @@
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
 
+  <!-- El valor por defecto de BaseIntermediateOutputPath es 'obj\' (barra invertida, heredado
+       de Microsoft.Common.props). En Windows es indiferente, pero en macOS/Linux `dotnet watch`
+       concatena esa cadena tal cual para localizar staticwebassets.development.json y acaba
+       buscando en 'obj\Debug/net10.0/', una carpeta que no existe: el hot reload de los assets
+       estáticos queda roto. Normalizarla a barras inclinadas lo soluciona en todas las plataformas. -->
+  <PropertyGroup>
+    <BaseIntermediateOutputPath>obj/</BaseIntermediateOutputPath>
+    <BaseOutputPath>bin/</BaseOutputPath>
+  </PropertyGroup>
+
 </Project>

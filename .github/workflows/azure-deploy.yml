@@ -1,0 +1,40 @@
+name: Build and Deploy to Azure App Service
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+env:
+  DOTNET_VERSION: '8.x' # O '9.x' según la versión que estés usando
+  AZURE_WEBAPP_NAME: 'tu-nombre-de-app-service' # El nombre que le diste en Azure
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up .NET Core
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: ${{ env.DOTNET_VERSION }}
+
+    - name: Install dependencies
+      run: dotnet restore
+
+    - name: Build and Test
+      run: |
+        dotnet build --configuration Release --no-restore
+        dotnet test --no-build --verbosity normal
+
+    - name: Publish API & Blazor Client
+      run: dotnet publish TranslationService.Api/TranslationService.Api.csproj -c Release -o ./publish
+
+    - name: Deploy to Azure Web App
+      uses: azure/webapps-deploy@v3
+      with:
+        app-name: ${{ env.AZURE_WEBAPP_NAME }}
+        publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
+        package: ./publish
