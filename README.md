@@ -31,11 +31,11 @@ dotnet user-secrets set "AzureTranslator:Region" "<tu-región>"  --project Trans
 dotnet run --project TranslationService.Api
 ```
 
-| | |
-|---|---|
-| Aplicación | http://localhost:5111 |
-| API | http://localhost:5111/api/translations |
-| Documentación interactiva | http://localhost:5111/scalar/v1 |
+|                           |                                        |
+| ------------------------- | -------------------------------------- |
+| Aplicación                | http://localhost:5111                  |
+| API                       | http://localhost:5111/api/translations |
+| Documentación interactiva | http://localhost:5111/scalar/v1        |
 
 Un solo proceso sirve la API y el SPA. Tailwind se compila automáticamente durante el build de MSBuild; no hace falta ejecutar `npm` a mano.
 
@@ -179,14 +179,14 @@ flowchart TB
 
 `Domain` (en verde) no tiene ni una sola referencia externa, ni siquiera a `Microsoft.Extensions`. `Contracts` existe porque el cliente WASM necesita los DTOs y no puede referenciar `Application`: arrastraría `Domain` al navegador y rompería la regla de dependencias.
 
-| Proyecto | Responsabilidad |
-|---|---|
-| **Domain** | Agregado `TranslationJob`, Value Objects, `Result<T>`, puerto del repositorio. Sin una sola dependencia externa, ni siquiera de Microsoft.Extensions. |
-| **Application** | Comandos y queries con sus handlers. Define los puertos de salida (`ITranslationProvider`, `IMessageQueue<T>`). |
-| **Infrastructure** | Los adaptadores: repositorio en memoria, cola sobre Channels, worker, cliente de Azure con Polly. |
-| **Api** | Composition root, endpoints mínimos, `ProblemDetails`, hosting del SPA. |
-| **Contracts** | DTOs de transporte compartidos entre API y cliente. Sin dependencias. |
-| **Client** | SPA Blazor WebAssembly con Tailwind. |
+| Proyecto           | Responsabilidad                                                                                                                                       |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Domain**         | Agregado `TranslationJob`, Value Objects, `Result<T>`, puerto del repositorio. Sin una sola dependencia externa, ni siquiera de Microsoft.Extensions. |
+| **Application**    | Comandos y queries con sus handlers. Define los puertos de salida (`ITranslationProvider`, `IMessageQueue<T>`).                                       |
+| **Infrastructure** | Los adaptadores: repositorio en memoria, cola sobre Channels, worker, cliente de Azure con Polly.                                                     |
+| **Api**            | Composition root, endpoints mínimos, `ProblemDetails`, hosting del SPA.                                                                               |
+| **Contracts**      | DTOs de transporte compartidos entre API y cliente. Sin dependencias.                                                                                 |
+| **Client**         | SPA Blazor WebAssembly con Tailwind.                                                                                                                  |
 
 ---
 
@@ -346,11 +346,11 @@ Se usa `/translate?to=es` **omitiendo el parámetro `from`**. Azure autodetecta 
 
 Ambos, pero nunca arbitrariamente:
 
-| Situación | Mecanismo | Por qué |
-|---|---|---|
-| Value Object inválido | `Result<T>` | La entrada viene de fuera y no es de confianza. El fallo es esperado y la API lo convierte en un 400. |
+| Situación                   | Mecanismo            | Por qué                                                                                                    |
+| --------------------------- | -------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Value Object inválido       | `Result<T>`          | La entrada viene de fuera y no es de confianza. El fallo es esperado y la API lo convierte en un 400.      |
 | Transición de estado ilegal | Excepción de dominio | No es un caso de uso, es un defecto: alguien llamó al agregado fuera de orden. Debe explotar ruidosamente. |
-| Handler de aplicación | `Result<T>` | Job inexistente o proveedor caído son desenlaces normales del flujo. |
+| Handler de aplicación       | `Result<T>`          | Job inexistente o proveedor caído son desenlaces normales del flujo.                                       |
 
 ### Ningún `null` en superficie pública
 
@@ -375,7 +375,7 @@ Timeout total (45 s) ─┐  techo absoluto, reintentos incluidos
       Timeout de intento (10 s)  impide que una llamada colgada consuma todo el presupuesto
 ```
 
-El *jitter* evita que varios trabajos que fallaron a la vez reintenten sincronizados y provoquen un pico contra un servicio ya frágil.
+El _jitter_ evita que varios trabajos que fallaron a la vez reintenten sincronizados y provoquen un pico contra un servicio ya frágil.
 
 Tres tests montan el contenedor real de `AddInfrastructure` y sólo sustituyen el transporte, para demostrar que Polly está **enganchado** y no meramente referenciado: un 500 genera 4 intentos, un **401 genera 1** —no es transitorio, reintentarlo sólo gasta cuota— y tras varios 503 el circuito se abre y la siguiente llamada ni siquiera llega al transporte.
 
@@ -415,7 +415,7 @@ Ambas cosas se resuelven sustituyendo `InMemoryTranslationJobRepository` por un 
 
 ### El `index.html` publicado necesita un target explícito
 
-Hospedar Blazor WASM desde un proyecto de API deja un hueco en el SDK: la generación del *import map* y la sustitución del marcador de huella digital sólo ocurren durante el `publish` del propio proyecto Blazor. El `index.html` que publicaba la API conservaba un import map vacío y el SPA no arrancaba.
+Hospedar Blazor WASM desde un proyecto de API deja un hueco en el SDK: la generación del _import map_ y la sustitución del marcador de huella digital sólo ocurren durante el `publish` del propio proyecto Blazor. El `index.html` que publicaba la API conservaba un import map vacío y el SPA no arrancaba.
 
 El target `UseBlazorClientPublishedHtml` en [`TranslationService.Api.csproj`](TranslationService.Api/TranslationService.Api.csproj) publica el cliente y se queda con **su** `index.html`. Es seguro porque las huellas son hashes de contenido y ambos publishes producen los mismos nombres. Dos comprobaciones convierten cualquier regresión futura en un fallo de compilación en vez de una página en blanco.
 
@@ -430,13 +430,13 @@ dotnet test --filter "FullyQualifiedName~Smoke" \
             --logger "console;verbosity=detailed"    # contra Azure real
 ```
 
-| Área | Nº | Qué cubre |
-|---|---:|---|
-| Domain | 58 | Máquina de estados completa del agregado, incluidas **todas** las transiciones ilegales desde cada estado terminal. Value Objects y `Result`. |
-| Infrastructure | 27 | Repositorio con 200 escrituras concurrentes, contrapresión de la cola, resiliencia de Polly, forma exacta de la petición a Azure. |
-| Application | 25 | La regla del idioma en ambas direcciones, idempotencia ante reentregas, y que un fallo del proveedor nunca deje un trabajo colgado. |
-| Api | 16 | Flujo completo sobre HTTP con `WebApplicationFactory`, `ProblemDetails`, y la frontera entre la API y el SPA. |
-| Smoke | 3 | Flujo entero contra **Azure real**. Se omiten solos si no hay credenciales, para que la suite siga verde en CI. |
+| Área           |  Nº | Qué cubre                                                                                                                                     |
+| -------------- | --: | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| Domain         |  58 | Máquina de estados completa del agregado, incluidas **todas** las transiciones ilegales desde cada estado terminal. Value Objects y `Result`. |
+| Infrastructure |  27 | Repositorio con 200 escrituras concurrentes, contrapresión de la cola, resiliencia de Polly, forma exacta de la petición a Azure.             |
+| Application    |  25 | La regla del idioma en ambas direcciones, idempotencia ante reentregas, y que un fallo del proveedor nunca deje un trabajo colgado.           |
+| Api            |  16 | Flujo completo sobre HTTP con `WebApplicationFactory`, `ProblemDetails`, y la frontera entre la API y el SPA.                                 |
+| Smoke          |   3 | Flujo entero contra **Azure real**. Se omiten solos si no hay credenciales, para que la suite siga verde en CI.                               |
 
 La compilación trata los warnings como errores.
 
@@ -459,7 +459,7 @@ export AZURE_TRANSLATOR_REGION=<tu-región>
 
 **Despliegues siguientes:** cada push a `main` dispara [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml), que construye, publica etiquetando con el SHA del commit y actualiza la revisión.
 
-La clave de Azure se almacena como *secret* de la Container App y se referencia por nombre; nunca viaja como variable de entorno en claro. El Service Principal del CI tiene rol *contributor* acotado **sólo** al grupo de recursos.
+La clave de Azure se almacena como _secret_ de la Container App y se referencia por nombre; nunca viaja como variable de entorno en claro. El Service Principal del CI tiene rol _contributor_ acotado **sólo** al grupo de recursos.
 
 Algunas notas del despliegue real:
 
@@ -490,6 +490,23 @@ Aproximadamente 2.300 líneas de código de producción.
 
 ## Stack
 
-.NET 10 · C# 14 · Blazor WebAssembly · Tailwind CSS v4 · Polly v8 · xUnit · NSubstitute · FluentAssertions · Azure Container Apps · Bicep
+.NET 10 · C# 14 · Blazor WebAssembly · Tailwind CSS v4 · Polly v8 · xUnit · NSubstitute · AwesomeAssertions · Azure Container Apps · Bicep
 
-> **Nota sobre licencias:** `FluentAssertions` 8 —heredado del andamiaje inicial— requiere licencia comercial de pago. Sustituirlo por `AwesomeAssertions` (fork libre bajo Apache 2.0) es un cambio de una línea en `Directory.Packages.props` que no obliga a tocar ninguna aserción.
+## Licencias de las dependencias
+
+Todo el árbol de dependencias es de uso libre, también para uso comercial. No hay ninguna licencia de pago ni de sólo uso no comercial.
+
+| Licencia | Paquetes |
+|---|---|
+| MIT | Toda la familia `Microsoft.*` (ASP.NET Core, Extensions, Http.Resilience, Test.Sdk), `Scalar.AspNetCore`, `coverlet.collector`, `tailwindcss` |
+| Apache-2.0 | `xunit`, `xunit.runner.visualstudio`, `AwesomeAssertions` |
+| BSD-3-Clause | `NSubstitute` |
+
+Auditado sobre el árbol completo: **83 paquetes NuGet** contando las transitivas. El único que no declara una expresión SPDX es `xunit.abstractions 2.0.3`, que apunta por URL al fichero de licencia de xunit —Apache-2.0— por ser anterior a ese formato.
+
+Del lado npm, **32 paquetes**, todos `devDependencies` del compilador de Tailwind: 26 MIT, 2 ISC, 1 Apache-2.0, 1 BSD-3-Clause y 2 MPL-2.0 (`lightningcss`, el minificador de CSS). El copyleft débil de MPL-2.0 alcanza sólo a los ficheros del propio paquete, que además es una herramienta de compilación: no se distribuye nada suyo en la imagen del contenedor, sólo el CSS generado.
+
+Dos elecciones deliberadas para que siga siendo así:
+
+- **`AwesomeAssertions` en lugar de `FluentAssertions`.** A partir de la versión 8, FluentAssertions pasó a la licencia comercial de Xceed, gratuita **sólo para uso no comercial**. `AwesomeAssertions` es su fork bajo Apache-2.0; el cambio fue una línea en `Directory.Packages.props` y otra en el `global using`, sin tocar ni una de las 129 aserciones.
+- **Sin MediatR.** Sus versiones recientes también pasaron a licencia comercial. El despacho de comandos y queries se resuelve con tres registros explícitos en el contenedor de DI, sin dependencia externa.
