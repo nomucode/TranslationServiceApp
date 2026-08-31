@@ -15,7 +15,10 @@ set -euo pipefail
 # ── Configuración ────────────────────────────────────────────────────────────
 GITHUB_USER="${GITHUB_USER:?Define GITHUB_USER con tu usuario de GitHub}"
 IMAGE_TAG="${IMAGE_TAG:-$(date +%Y%m%d%H%M%S)}"
-IMAGE="ghcr.io/${GITHUB_USER,,}/translation-api:${IMAGE_TAG}"
+# ghcr.io rechaza mayúsculas en la ruta. Se usa `tr` y no ${VAR,,} porque macOS trae
+# bash 3.2, donde esa expansión es un error de sintaxis.
+GITHUB_USER_LC="$(printf '%s' "${GITHUB_USER}" | tr '[:upper:]' '[:lower:]')"
+IMAGE="ghcr.io/${GITHUB_USER_LC}/translation-api:${IMAGE_TAG}"
 
 RESOURCE_GROUP="${RESOURCE_GROUP:-rg-translation-service}"
 LOCATION="${LOCATION:-westeurope}"
@@ -40,7 +43,7 @@ docker push "${IMAGE}"
 echo
 echo "⚠️  La imagen debe ser PÚBLICA para que Container Apps la descargue sin credenciales."
 echo "    Si es la primera vez, hazla pública en:"
-echo "    https://github.com/users/${GITHUB_USER}/packages/container/translation-api/settings"
+echo "    https://github.com/users/${GITHUB_USER_LC}/packages/container/translation-api/settings"
 read -r -p "    Pulsa Enter cuando esté lista... "
 
 # ── 2. Infraestructura ───────────────────────────────────────────────────────
