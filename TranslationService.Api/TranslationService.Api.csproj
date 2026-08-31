@@ -1,4 +1,9 @@
-﻿<Project Sdk="Microsoft.NET.Sdk.Web"><PropertyGroup>  <UserSecretsId>3e060b1b-7d86-4895-aec1-f6dd8a0eca77</UserSecretsId>
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <!-- La API key de Azure vive en user-secrets, nunca en appsettings.json.
+         Consulta el README para los comandos de configuración. -->
+    <UserSecretsId>3e060b1b-7d86-4895-aec1-f6dd8a0eca77</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
