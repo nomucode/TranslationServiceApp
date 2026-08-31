@@ -1,0 +1,32 @@
+<span class="@CssClass">
+    @if (Pulse)
+    {
+        @* El punto latiendo comunica "esto sigue en marcha" sin necesidad de texto. *@
+        <span class="relative flex size-1.5">
+            <span class="absolute inline-flex size-full animate-ping rounded-full bg-current opacity-60"></span>
+            <span class="relative inline-flex size-1.5 rounded-full bg-current"></span>
+        </span>
+    }
+    @ChildContent
+</span>
+
+@code {
+    public enum BadgeTone { Neutral, Info, Success, Danger }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public BadgeTone Tone { get; set; } = BadgeTone.Neutral;
+    [Parameter] public bool Pulse { get; set; }
+
+    private const string BaseClasses =
+        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium";
+
+    private string CssClass => $"{BaseClasses} {ToneClasses}";
+
+    private string ToneClasses => Tone switch
+    {
+        BadgeTone.Info => "bg-brand/10 text-brand",
+        BadgeTone.Success => "bg-success/12 text-success",
+        BadgeTone.Danger => "bg-danger/12 text-danger",
+        _ => "bg-surface-muted text-content-muted"
+    };
+}

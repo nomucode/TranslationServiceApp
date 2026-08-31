@@ -1,0 +1,59 @@
+<div class="border-t border-border-subtle bg-surface/80 p-4 backdrop-blur">
+    <div class="mx-auto flex w-full max-w-3xl items-end gap-3">
+        <textarea @ref="_textArea"
+                  value="@Value"
+                  @oninput="OnInput"
+                  @onkeydown="OnKeyDownAsync"
+                  rows="1"
+                  maxlength="5000"
+                  placeholder="@Placeholder"
+                  aria-label="Texto a traducir"
+                  class="max-h-40 min-h-[2.75rem] flex-1 resize-none rounded-xl border border-border-subtle bg-canvas px-4 py-3
+                         text-sm leading-relaxed text-content placeholder:text-content-muted
+                         focus:border-brand focus:outline-none"></textarea>
+
+        <Button OnClick="SubmitAsync" Disabled="@(!CanSubmit)" Class="h-[2.75rem] shrink-0">
+            Traducir
+        </Button>
+    </div>
+
+    <p class="mx-auto mt-2 w-full max-w-3xl text-xs text-content-muted">
+        Pulsa <kbd class="rounded border border-border-subtle bg-surface-muted px-1 py-0.5 font-sans">Enter</kbd> para enviar,
+        <kbd class="rounded border border-border-subtle bg-surface-muted px-1 py-0.5 font-sans">Shift + Enter</kbd> para salto de línea.
+        El idioma de origen se detecta automáticamente.
+    </p>
+</div>
+
+@code {
+    private ElementReference _textArea;
+
+    [Parameter] public string Value { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public EventCallback OnSubmit { get; set; }
+    [Parameter] public string Placeholder { get; set; } = "Escribe el texto que quieres traducir...";
+
+    private bool CanSubmit => !string.IsNullOrWhiteSpace(Value);
+
+    private Task OnInput(ChangeEventArgs args) => ValueChanged.InvokeAsync(args.Value?.ToString() ?? string.Empty);
+
+    private async Task OnKeyDownAsync(KeyboardEventArgs args)
+    {
+        // Enter envía; Shift+Enter inserta salto de línea. Es la convención que espera
+        // cualquiera que haya usado un chat.
+        if (args.Key is "Enter" && !args.ShiftKey && CanSubmit)
+        {
+            await SubmitAsync();
+        }
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (!CanSubmit)
+        {
+            return;
+        }
+
+        await OnSubmit.InvokeAsync();
+        await _textArea.FocusAsync();
+    }
+}

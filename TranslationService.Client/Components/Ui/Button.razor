@@ -1,0 +1,38 @@
+@* Primitiva pura: sin estado ni dependencias. Todo lo variable llega por parámetro. *@
+
+<button type="@Type"
+        class="@CssClass"
+        disabled="@(Disabled || Loading)"
+        aria-busy="@Loading"
+        @onclick="OnClick">
+    @if (Loading)
+    {
+        <Spinner Class="size-4" />
+    }
+    @ChildContent
+</button>
+
+@code {
+    public enum ButtonVariant { Primary, Ghost }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+    [Parameter] public ButtonVariant Variant { get; set; } = ButtonVariant.Primary;
+    [Parameter] public string Type { get; set; } = "button";
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public bool Loading { get; set; }
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public EventCallback OnClick { get; set; }
+
+    private const string BaseClasses =
+        "inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2.5 text-sm font-medium " +
+        "transition-colors duration-150 disabled:cursor-not-allowed disabled:opacity-50";
+
+    private string CssClass => string.Join(' ', BaseClasses, VariantClasses, Class);
+
+    private string VariantClasses => Variant switch
+    {
+        ButtonVariant.Primary => "bg-brand text-brand-contrast hover:bg-brand-strong",
+        ButtonVariant.Ghost => "text-content-muted hover:bg-surface-muted hover:text-content",
+        _ => string.Empty
+    };
+}

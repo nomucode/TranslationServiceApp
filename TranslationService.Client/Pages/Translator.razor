@@ -1,0 +1,144 @@
+@page "/"
+@using TranslationService.Client.Models
+@using TranslationService.Client.Services
+@implements IDisposable
+@inject ITranslationApiClient Api
+@inject PollingOptions Polling
+
+<PageTitle>Servicio de Traducción</PageTitle>
+
+<div class="flex h-dvh flex-col bg-canvas">
+
+    <header class="border-b border-border-subtle bg-surface/80 backdrop-blur">
+        <div class="mx-auto flex w-full max-w-3xl items-center justify-between px-4 py-3.5">
+            <div class="flex items-center gap-3">
+                <div class="flex size-9 items-center justify-center rounded-xl bg-brand text-brand-contrast">
+                    <svg class="size-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="m5 8 6 6M4 14l6-6 2-3M2 5h12M7 2h1M22 22l-5-10-5 10M14 18h6" />
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="text-sm font-semibold leading-tight">Servicio de Traducción</h1>
+                    <p class="text-xs text-content-muted">Detección automática · Traduce al español</p>
+                </div>
+            </div>
+
+            @if (_entries.Count > 0)
+            {
+                <Button Variant="Button.ButtonVariant.Ghost" OnClick="Clear" Class="text-xs">Limpiar</Button>
+            }
+        </div>
+    </header>
+
+    <main class="flex-1 overflow-y-auto" aria-live="polite">
+        <div class="mx-auto flex w-full max-w-3xl flex-col gap-6 px-4 py-6">
+            @if (_entries.Count == 0)
+            {
+                <div class="flex flex-col items-center gap-3 pt-16 text-center">
+                    <div class="flex size-12 items-center justify-center rounded-2xl bg-surface-muted text-content-muted">
+                        <svg class="size-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75"
+                             stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                        </svg>
+                    </div>
+                    <h2 class="text-base font-medium">Escribe algo para traducir</h2>
+                    <p class="max-w-sm text-sm text-content-muted">
+                        Detectamos el idioma automáticamente. Si el texto ya está en español,
+                        te lo devolvemos tal cual sin traducirlo.
+                    </p>
+                </div>
+            }
+
+            @foreach (var entry in _entries)
+            {
+                <ChatMessage @key="entry.Id" Entry="entry" />
+            }
+        </div>
+    </main>
+
+    <ChatComposer @bind-Value="_draft" OnSubmit="SendAsync" />
+</div>
+
+@code {
+    private readonly List<ChatEntry> _entries = [];
+    private readonly CancellationTokenSource _cts = new();
+    private string _draft = string.Empty;
+
+    private async Task SendAsync()
+    {
+        var text = _draft.Trim();
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return;
+        }
+
+        // Optimismo: la burbuja aparece antes de hablar con el servidor. El usuario ve su
+        // mensaje al instante y la caja se vacía, igual que en un chat real.
+        var entry = new ChatEntry(text);
+        _entries.Add(entry);
+        _draft = string.Empty;
+
+        var accepted = await Api.CreateAsync(text, _cts.Token);
+        if (accepted.IsFailure)
+        {
+            entry.Fail(accepted.Error);
+            return;
+        }
+
+        entry.Accept(accepted.Value.StatusUrl);
+
+        // Se lanza sin await deliberadamente: el sondeo de este mensaje no debe bloquear el
+        // envío del siguiente. Cada intercambio tiene su propio ciclo de vida, así que varias
+        // traducciones pueden estar en curso a la vez.
+        _ = PollUntilSettledAsync(entry);
+    }
+
+    /// Polling estratégico: empieza agresivo porque la mayoría de traducciones terminan en
+    /// ~300 ms, y se va espaciando si el trabajo se alarga. El Task.Delay no bloquea el hilo
+    /// de la UI; entre sondeo y sondeo Blazor sigue atendiendo eventos con normalidad.
+    private async Task PollUntilSettledAsync(ChatEntry entry)
+    {
+        var delay = Polling.InitialDelay;
+        var deadline = DateTimeOffset.UtcNow + Polling.Timeout;
+
+        try
+        {
+            while (!_cts.IsCancellationRequested && DateTimeOffset.UtcNow < deadline)
+            {
+                await Task.Delay(delay, _cts.Token);
+
+                var job = await Api.GetAsync(entry.StatusUrl, _cts.Token);
+                if (job.IsSuccess)
+                {
+                    entry.Apply(job.Value);
+                    await InvokeAsync(StateHasChanged);
+
+                    if (job.Value.IsTerminal)
+                    {
+                        return;
+                    }
+                }
+
+                delay = Polling.NextDelay(delay);
+            }
+
+            entry.TimeOut();
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (OperationCanceledException)
+        {
+            // El componente se está destruyendo: no hay nada que actualizar.
+        }
+    }
+
+    private void Clear() => _entries.Clear();
+
+    /// Cancelar aquí es lo que impide que los bucles de sondeo sigan vivos —y llamando a
+    /// StateHasChanged sobre un componente ya destruido— si el usuario navega fuera.
+    public void Dispose()
+    {
+        _cts.Cancel();
+        _cts.Dispose();
+    }
+}

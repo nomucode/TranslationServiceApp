@@ -1,32 +1,40 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>TranslationService.Client</title>
+    <title>Servicio de Traducción</title>
     <base href="/" />
+    <meta name="color-scheme" content="light dark" />
     <link rel="preload" id="webassembly" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="css/app.css" />
     <link rel="icon" type="image/png" href="favicon.png" />
-    <link href="TranslationService.Client.styles.css" rel="stylesheet" />
     <script type="importmap"></script>
 </head>
 
-<body>
+<body class="bg-canvas text-content">
     <div id="app">
-        <svg class="loading-progress">
-            <circle r="40%" cx="50%" cy="50%" />
-            <circle r="40%" cx="50%" cy="50%" />
-        </svg>
-        <div class="loading-progress-text"></div>
+        <div class="flex min-h-screen items-center justify-center">
+            <div class="flex flex-col items-center gap-4">
+                <div class="size-8 animate-spin rounded-full border-2 border-border-subtle border-t-brand"></div>
+                <p class="text-sm text-content-muted">Cargando la aplicación...</p>
+            </div>
+        </div>
     </div>
 
-    <div id="blazor-error-ui">
-        An unhandled error has occurred.
-        <a href="." class="reload">Reload</a>
-        <span class="dismiss">🗙</span>
+    <div id="blazor-error-ui"
+         class="fixed inset-x-0 bottom-0 z-50 hidden items-center justify-between gap-4 border-t border-danger/30 bg-danger/10 px-6 py-4 text-sm text-content backdrop-blur">
+        <span>Se ha producido un error inesperado.</span>
+        <span class="flex gap-3">
+            <a href="." class="reload font-medium text-brand underline underline-offset-4">Recargar</a>
+            <span class="dismiss cursor-pointer text-content-muted">✕</span>
+        </span>
     </div>
+
     <script src="_framework/blazor.webassembly#[.{fingerprint}].js"></script>
 </body>
 

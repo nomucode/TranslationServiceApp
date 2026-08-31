@@ -13,4 +13,33 @@
     <ProjectReference Include="..\TranslationService.Contracts\TranslationService.Contracts.csproj" />
   </ItemGroup>
 
+  <!-- wwwroot/css/app.css es un artefacto generado por Tailwind, no fuente: se excluye del
+       proyecto para que no se versione ni se duplique como static web asset. -->
+  <ItemGroup>
+    <Content Remove="wwwroot/css/app.css" />
+    <None Include="wwwroot/css/app.css" CopyToOutputDirectory="Never" />
+    <TailwindInput Include="Styles/app.tailwind.css" />
+    <TailwindSource Include="**/*.razor;**/*.html" Exclude="bin/**;obj/**;node_modules/**" />
+  </ItemGroup>
+
+  <!-- Instala dependencias sólo si faltan. La marca de tiempo de node_modules frente a
+       package.json evita reinstalar en cada compilación. -->
+  <Target Name="RestoreNpmPackages"
+          BeforeTargets="BuildTailwindCss"
+          Inputs="package.json"
+          Outputs="node_modules/.package-lock.json">
+    <Message Importance="high" Text="Instalando dependencias npm del cliente..." />
+    <Exec Command="npm install --no-audit --no-fund" WorkingDirectory="$(MSBuildProjectDirectory)" />
+  </Target>
+
+  <!-- Inputs/Outputs dan incrementalidad: Tailwind sólo se reejecuta si cambió el tema o
+       alguna clase en un .razor, no en cada compilación. -->
+  <Target Name="BuildTailwindCss"
+          BeforeTargets="BeforeBuild"
+          Inputs="@(TailwindInput);@(TailwindSource);package.json"
+          Outputs="wwwroot/css/app.css">
+    <Message Importance="high" Text="Generando CSS con Tailwind..." />
+    <Exec Command="npm run build:css" WorkingDirectory="$(MSBuildProjectDirectory)" />
+  </Target>
+
 </Project>

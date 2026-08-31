@@ -1,0 +1,66 @@
+@using TranslationService.Client.Models
+
+<div class="flex flex-col gap-2 animate-bubble-in">
+
+    @* Burbuja del usuario: aparece de inmediato, antes de que el servidor conteste. *@
+    <div class="flex justify-end">
+        <div class="max-w-[85%] rounded-bubble rounded-br-md bg-brand px-4 py-2.5 text-brand-contrast sm:max-w-[75%]">
+            <p class="whitespace-pre-wrap break-words text-sm leading-relaxed">@Entry.SourceText</p>
+        </div>
+    </div>
+
+    @* Burbuja de la traducción: su contenido depende del estado del trabajo. *@
+    <div class="flex justify-start">
+        <div class="max-w-[85%] rounded-bubble rounded-bl-md border border-border-subtle bg-surface px-4 py-2.5 sm:max-w-[75%]">
+            @switch (Entry.State)
+            {
+                case ChatEntryState.Sending:
+                case ChatEntryState.Queued:
+                case ChatEntryState.Translating:
+                    <div class="flex items-center gap-2.5 text-content-muted">
+                        <Spinner Class="size-3.5" Label="Traduciendo" />
+                        <span class="text-sm">@PendingLabel</span>
+                    </div>
+                    break;
+
+                case ChatEntryState.Completed:
+                    <p class="whitespace-pre-wrap break-words text-sm leading-relaxed text-content">@Entry.TranslatedText</p>
+                    <div class="mt-2 flex flex-wrap items-center gap-2">
+                        @if (Entry.WasTranslated)
+                        {
+                            <Badge Tone="Badge.BadgeTone.Success">@Entry.DetectedLanguage.ToUpperInvariant() → ES</Badge>
+                        }
+                        else
+                        {
+                            @* La regla de negocio, hecha visible: el usuario entiende por qué
+                               el texto no ha cambiado en lugar de pensar que algo falló. *@
+                            <Badge Tone="Badge.BadgeTone.Info">Ya estaba en español</Badge>
+                        }
+                        <span class="text-xs text-content-muted">@Entry.ProcessingTimeMs ms</span>
+                    </div>
+                    break;
+
+                case ChatEntryState.Failed:
+                case ChatEntryState.TimedOut:
+                    <div class="flex flex-col gap-1.5">
+                        <Badge Tone="Badge.BadgeTone.Danger">
+                            @(Entry.State is ChatEntryState.TimedOut ? "Tiempo agotado" : "No se pudo traducir")
+                        </Badge>
+                        <p class="text-sm leading-relaxed text-content-muted">@Entry.ErrorMessage</p>
+                    </div>
+                    break;
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public required ChatEntry Entry { get; set; }
+
+    private string PendingLabel => Entry.State switch
+    {
+        ChatEntryState.Sending => "Enviando...",
+        ChatEntryState.Queued => "En cola...",
+        _ => "Traduciendo..."
+    };
+}
